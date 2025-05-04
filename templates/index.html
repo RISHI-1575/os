@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Replacement Algorithm Simulator</title>
+    <style>
+        /* General body styling */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #0a192f; /* Night blue background */
+            color: #e0e0e0; /* Light text for contrast */
+        }
+
+        /* Header styling */
+        header {
+            background-color: #112240; /* Darker blue for the header */
+            color: #64ffda; /* Neon green for the title */
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+
+        /* Layout styling */
+        .container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin: 30px auto;
+            max-width: 1200px;
+        }
+
+        .form-container, .summary-container {
+            background-color: #112240; /* Dark grayish-blue for containers */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 10px;
+            flex: 0 0 45%; /* Makes both containers appear side-by-side */
+        }
+
+        /* Adjust input box to fit properly inside the container */
+        .form-container form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px; /* Adds spacing between input elements */
+        }
+
+        .form-container label {
+            font-weight: bold;
+            color: #64ffda; /* Neon green */
+        }
+
+        .form-container input, .form-container button {
+            width: 90%; /* Reduced width to fit properly inside the container */
+            align-self: center; /* Center the input elements */
+            padding: 10px; /* Consistent padding for better appearance */
+            border: 1px solid #64ffda;
+            border-radius: 4px;
+            background-color: #0a192f;
+            color: #e0e0e0;
+        }
+
+        .form-container input::placeholder {
+            color: #888; /* Placeholder text color */
+        }
+
+        .form-container button {
+            background-color: #64ffda;
+            color: #0a192f;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s, background-color 0.3s;
+        }
+
+        .form-container button:hover {
+            background-color: #0a192f;
+            color: #64ffda;
+            transform: scale(1.1);
+        }
+
+        /* Results container styling */
+        .results-container {
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #112240;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+            border-radius: 8px;
+            max-width: 1000px; /* Adjusted to match form + summary width */
+        }
+
+        /* Table styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #64ffda;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #0a192f; /* Night blue */
+            color: #64ffda;
+        }
+
+        tr:nth-child(even) {
+            background-color: #112240;
+        }
+
+        tr:hover {
+            background-color: #64ffda;
+            color: #0a192f;
+        }
+
+        /* Best Method Highlight */
+        .best-method {
+            background-color: #64ffda;
+            color: #0a192f;
+            font-weight: bold;
+        }
+
+        /* Section title styling */
+        .section-title {
+            text-align: center;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #64ffda;
+        }
+
+        /* Footer styling */
+        footer {
+            text-align: center;
+            padding: 10px;
+            margin-top: 20px;
+            background-color: #112240;
+            color: #64ffda;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Page Replacement Algorithms Simulator</h1>
+    </header>
+
+    <div class="container">
+        <section class="form-container">
+            <form method="POST">
+                <label for="pages">Page References (space-separated):</label>
+                <input type="text" id="pages" name="pages" placeholder="e.g., 7 0 1 2 0 3 0 4 2 3 0 3" required>
+
+                <label for="frames">Number of Frames:</label>
+                <input type="number" id="frames" name="frames" min="1" placeholder="Enter number of frames" required>
+
+                <button type="submit">Simulate</button>
+            </form>
+        </section>
+
+        <section class="summary-container">
+            <h3 class="section-title">Page Fault Summary</h3>
+            {% if results %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Page Faults</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for method, faults in methods.items() %}
+                    <tr class="{% if best_method == method %}best-method{% endif %}">
+                        <td>{{ method }}</td>
+                        <td>{{ faults }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <p><b>Best Method:</b> {{ best_method }}</p>
+            {% endif %}
+        </section>
+    </div>
+
+    {% if results %}
+    <section class="results-container">
+        <h2 class="section-title">Simulation Results</h2>
+        <h3>Page References: {{ page_references }}</h3>
+        <h3>Number of Frames: {{ frames }}</h3>
+
+        <!-- FIFO Table -->
+        <div>
+            <h3 class="section-title">FIFO Algorithm</h3>
+            <p><b>Total Page Faults:</b> {{ results.fifo.faults }}</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Frame</th>
+                        {% for page in page_references %}
+                        <th>{{ page }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for frame in range(frames) %}
+                    <tr>
+                        <td>Frame {{ frame + 1 }}</td>
+                        {% for step in results.fifo.steps %}
+                        <td>{{ step[frame] }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <td>Page Fault Count</td>
+                        {% for fault in results.fifo.page_faults %}
+                        <td>{{ fault }}</td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- LRU Table -->
+        <div>
+            <h3 class="section-title">LRU Algorithm</h3>
+            <p><b>Total Page Faults:</b> {{ results.lru.faults }}</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Frame</th>
+                        {% for page in page_references %}
+                        <th>{{ page }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for frame in range(frames) %}
+                    <tr>
+                        <td>Frame {{ frame + 1 }}</td>
+                        {% for step in results.lru.steps %}
+                        <td>{{ step[frame] }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <td>Page Fault Count</td>
+                        {% for fault in results.lru.page_faults %}
+                        <td>{{ fault }}</td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Optimal Table -->
+        <div>
+            <h3 class="section-title">Optimal Algorithm</h3>
+            <p><b>Total Page Faults:</b> {{ results.optimal.faults }}</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Frame</th>
+                        {% for page in page_references %}
+                        <th>{{ page }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for frame in range(frames) %}
+                    <tr>
+                        <td>Frame {{ frame + 1 }}</td>
+                        {% for step in results.optimal.steps %}
+                        <td>{{ step[frame] }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <td>Page Fault Count</td>
+                        {% for fault in results.optimal.page_faults %}
+                        <td>{{ fault }}</td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+
+    <footer>
+        <p>&copy; 2025 Page Replacement Simulator</p>
+    </footer>
+</body>
+</html>
